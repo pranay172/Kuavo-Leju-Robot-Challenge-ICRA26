@@ -1,0 +1,13 @@
+diff --git a/lerobot_patches/custom_patches.py b/lerobot_patches/custom_patches.py
+index 8ea5408..3b1d6ac 100644
+--- a/lerobot_patches/custom_patches.py
++++ b/lerobot_patches/custom_patches.py
+@@ -90,6 +90,8 @@ def compute_episode_stats(episode_data: dict[str, list[str] | np.ndarray], featu
+             axes_to_reduce = 0  # compute stats over the first axis
+             keepdims = data.ndim == 1  # keep as np.array
+         # print(features[key]["dtype"], ep_ft_array.shape)
++        # Promote before the second moment: uint8/uint16 squaring overflows.
++        ep_ft_array = ep_ft_array.astype(np.float64, copy=False)
+         ep_stats[key] = get_feature_stats(ep_ft_array, axis=axes_to_reduce, keepdims=keepdims)
+         print("meta stats compute:",key, features[key]["dtype"], ep_stats[key]["count"],ep_stats[key]["mean"].shape,ep_ft_array.shape, )
+ 

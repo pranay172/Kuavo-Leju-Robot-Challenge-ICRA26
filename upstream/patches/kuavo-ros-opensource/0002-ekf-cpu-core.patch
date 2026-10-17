@@ -1,0 +1,36 @@
+diff --git a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch
+--- a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch
++++ b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch
+@@ -111,7 +111,7 @@
+     </node>
+     <node pkg="nodelet" type="nodelet" name="nodelet_controller" args="load HumanoidControllerNodelet nodelet_manager" respawn="false" output="screen" required="true">
+       </node>
+-    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 18">
++    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 1">
+       <rosparam command="load" file="$(find humanoid_estimation)/params/ekf_template.yaml" />
+     </node>
+     <group unless="$(arg play_back)">
+diff --git a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch
+--- a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch
++++ b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch
+@@ -111,7 +111,7 @@
+     </node>
+     <node pkg="nodelet" type="nodelet" name="nodelet_controller" args="load HumanoidControllerNodelet nodelet_manager" respawn="false" output="screen" required="true">
+       </node>
+-    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 18">
++    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 1">
+       <rosparam command="load" file="$(find humanoid_estimation)/params/ekf_template.yaml" />
+     </node>
+     <group unless="$(arg play_back)">
+diff --git a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch
+--- a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch
++++ b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch
+@@ -111,7 +111,7 @@
+     </node>
+     <node pkg="nodelet" type="nodelet" name="nodelet_controller" args="load HumanoidControllerNodelet nodelet_manager" respawn="false" output="screen" required="true">
+       </node>
+-    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 18">
++    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 1">
+       <rosparam command="load" file="$(find humanoid_estimation)/params/ekf_template.yaml" />
+     </node>
+     <group unless="$(arg play_back)">

@@ -1,0 +1,60 @@
+diff --git a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch
+--- a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch
++++ b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim1.launch
+@@ -6,6 +6,7 @@
+     <env name="ROSCONSOLE_FORMAT" value="[${severity} ][${time:%Y-%m-%d-%H:%M:%S}][${node}]: ${message}"/>
+ 
+     <arg name="output_system_info" default="true"/>
++    <arg name="record_full_telemetry" default="true"/>
+     <arg name="vr_remote_control" default="false"/>
+     <arg name="robot_type"         default="humanoid"/>
+     <arg name="rviz"                default="false" />
+@@ -116,7 +117,7 @@
+     <group unless="$(arg play_back)">
+       <include file="$(find data_challenge_simulator)/launch/nodelet_with_arm1.launch"/>
+     </group>
+-      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
++      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch" if="$(arg record_full_telemetry)"/>
+    <group if="$(arg use_joystick)">
+       <group if="$(eval arg('joystick_type') == 'h12')">
+         <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch">
+diff --git a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch
+--- a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch
++++ b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim2.launch
+@@ -6,6 +6,7 @@
+     <env name="ROSCONSOLE_FORMAT" value="[${severity} ][${time:%Y-%m-%d-%H:%M:%S}][${node}]: ${message}"/>
+ 
+     <arg name="output_system_info" default="true"/>
++    <arg name="record_full_telemetry" default="true"/>
+     <arg name="vr_remote_control" default="false"/>
+     <arg name="robot_type"         default="humanoid"/>
+     <arg name="rviz"                default="false" />
+@@ -116,7 +117,7 @@
+     <group unless="$(arg play_back)">
+       <include file="$(find data_challenge_simulator)/launch/nodelet_with_arm2.launch"/>
+     </group>
+-      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
++      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch" if="$(arg record_full_telemetry)"/>
+    <group if="$(arg use_joystick)">
+       <group if="$(eval arg('joystick_type') == 'h12')">
+         <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch">
+diff --git a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch
+--- a/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch
++++ b/src/data_challenge_simulator/launch/load_kuavo_mujoco_sim3.launch
+@@ -6,6 +6,7 @@
+     <env name="ROSCONSOLE_FORMAT" value="[${severity} ][${time:%Y-%m-%d-%H:%M:%S}][${node}]: ${message}"/>
+ 
+     <arg name="output_system_info" default="true"/>
++    <arg name="record_full_telemetry" default="true"/>
+     <arg name="vr_remote_control" default="false"/>
+     <arg name="robot_type"         default="humanoid"/>
+     <arg name="rviz"                default="false" />
+@@ -116,7 +117,7 @@
+     <group unless="$(arg play_back)">
+       <include file="$(find data_challenge_simulator)/launch/nodelet_with_arm3.launch"/>
+     </group>
+-      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
++      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch" if="$(arg record_full_telemetry)"/>
+    <group if="$(arg use_joystick)">
+       <group if="$(eval arg('joystick_type') == 'h12')">
+         <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch">

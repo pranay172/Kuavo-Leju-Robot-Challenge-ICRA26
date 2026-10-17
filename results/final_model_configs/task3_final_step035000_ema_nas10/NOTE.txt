@@ -1,0 +1,1 @@
+Task 3 pick: EMA step035000 of task3_act_fresh_wsd_60000_20261005_112055, n_action_steps=10 (no ensemble). DEV 20 seeds 92.0; clean BENCH 100-129 94.7 (25/30 perfect, 1 safety exit).

@@ -1,0 +1,331 @@
+diff --git a/kuavo_data/CvtRosbag2Lerobot.py b/kuavo_data/CvtRosbag2Lerobot.py
+index f8e5840..e5ce9c6 100644
+--- a/kuavo_data/CvtRosbag2Lerobot.py
++++ b/kuavo_data/CvtRosbag2Lerobot.py
+@@ -89,31 +89,14 @@ def visualize_memory(attr_sizes, top_n=20):
+ log_print = logging.getLogger("rich")
+ 
+ try:
+-    from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
+-    from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+-    log_print.warning("import lerobot.common.xxx will be deprecated in lerobot v2.0, please use lerobot.xxx instead in the future.")
+-except Exception as import_error:
+-    try:
+-        import lerobot
+-    except Exception as lerobot_error:
+-        log_print.error("Error: lerobot package not found. Please change to 'third_party/lerobot' and install it using 'pip install -e .'.")
+-        sys.exit(1)
+-    log_print.info("Error: "+ str(import_error))
+-    log_print.info("Import lerobot.common.xxx is deprecated in lerobot v2.0, try to use import lerobot.xxx instead ...")
++    from lerobot.datasets.lerobot_dataset import LeRobotDataset
+     try:
+         from lerobot.datasets.lerobot_dataset import LEROBOT_HOME
+-        from lerobot.datasets.lerobot_dataset import LeRobotDataset
+-        log_print.info("import lerobot.datasets.lerobot_dataset ok!")
+-    except Exception as import_failed:
+-        log_print.info("Error:"+str(import_failed))
+-        if "LEROBOT_HOME" in str(import_failed):
+-            try:
+-                from lerobot.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
+-                from lerobot.datasets.lerobot_dataset import LeRobotDataset
+-                log_print.info("import lerobot.datasets.lerobot_dataset HF_LEROBOT_HOME,  LeRobotDataset ok!")
+-            except Exception as e:
+-                log_print.error(str(e))
+-                sys.exit(1)
++    except ImportError:
++        from lerobot.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
++except Exception as e:
++    log_print.error(f"Error: lerobot package not found or incompatible: {e}")
++    sys.exit(1)
+ 
+ 
+ import numpy as np
+@@ -239,8 +222,24 @@ def create_empty_dataset(
+                 ],
+             }
+ 
+-    if Path(LEROBOT_HOME / repo_id).exists():
+-        shutil.rmtree(LEROBOT_HOME / repo_id)
++    # Try multiple potential paths to find an existing dataset to append to
++    potential_paths = [
++        Path(root),              # Case 1: root is the dataset (v3.0 style)
++        Path(root) / repo_id,    # Case 2: repo_id is appended to root (v2.0 style)
++    ]
++    
++    for p in potential_paths:
++        if (p / "meta" / "info.json").exists():
++            log_print.info(f"Resuming existing dataset at {p}")
++            return LeRobotDataset(repo_id=repo_id, root=p)
++
++    # If we are here, we must create a new dataset.
++    # However, LeRobotDataset.create(root=root) fails if root exists because it uses exist_ok=False.
++    # If the target exists, we default to the subfolder repo_id to avoid the crash.
++    creation_root = root
++    if Path(creation_root).exists():
++        creation_root = Path(root) / repo_id
++        log_print.info(f"Target directory exists. Creating dataset in subfolder: {creation_root}")
+ 
+     return LeRobotDataset.create(
+         repo_id=repo_id,
+@@ -252,7 +251,7 @@ def create_empty_dataset(
+         image_writer_processes=dataset_config.image_writer_processes,
+         image_writer_threads=dataset_config.image_writer_threads,
+         video_backend=dataset_config.video_backend,
+-        root=root,
++        root=creation_root,
+     )
+ 
+ def load_raw_images_per_camera(bag_data: dict) -> dict[str, np.ndarray]:
+@@ -503,8 +502,7 @@ def port_kuavo_rosbag(
+     n: int | None = None,
+ ):
+     # Download raw data if not exists
+-    if (LEROBOT_HOME / repo_id).exists():
+-        shutil.rmtree(LEROBOT_HOME / repo_id)
++    # Create empty dataset or load existing
+ 
+     bag_reader = kuavo.KuavoRosbagReader()
+     bag_files = bag_reader.list_bag_files(raw_dir)
+@@ -534,7 +532,7 @@ def port_kuavo_rosbag(
+         task=task,
+         episodes=episodes,
+     )
+-    # dataset.consolidate()
++    dataset.finalize()
+     
+ @hydra.main(config_path="../configs/data/", config_name="KuavoRosbag2Lerobot", version_base=None)
+ def main(cfg: DictConfig):
+@@ -548,9 +546,14 @@ def main(cfg: DictConfig):
+ 
+     task_name = os.path.basename(raw_dir)
+     repo_id = f'lerobot/{task_name}'
+-    lerobot_dir = os.path.join(raw_dir,"../",version,"lerobot")
+-    if os.path.exists(lerobot_dir):
+-        shutil.rmtree(lerobot_dir)
++    
++    # Use absolute path if provided, otherwise resolve relative to raw_dir
++    if os.path.isabs(version):
++        lerobot_dir = version
++    else:
++        lerobot_dir = os.path.abspath(os.path.join(raw_dir,"../",version,"lerobot"))
++    # if os.path.exists(lerobot_dir):
++    #     shutil.rmtree(lerobot_dir)
+     
+     half_arm = len(kuavo.DEFAULT_ARM_JOINT_NAMES) // 2
+     half_claw = len(kuavo.DEFAULT_LEJUCLAW_JOINT_NAMES) // 2
+@@ -587,7 +590,4 @@ def main(cfg: DictConfig):
+ 
+ if __name__ == "__main__":
+     
+-    main()
+-    
+-
+-    
+\ No newline at end of file
++    main()
+\ No newline at end of file
+diff --git a/kuavo_data/batch_convert.py b/kuavo_data/batch_convert.py
+new file mode 100644
+index 0000000..dd44c47
+--- /dev/null
++++ b/kuavo_data/batch_convert.py
+@@ -0,0 +1,93 @@
++import os
++import subprocess
++import argparse
++from pathlib import Path
++
++# Dataset revision the published results were converted from; sim/ is unchanged at later revisions.
++HF_REVISION = "17c135ee0e68508aafeae0c6a84348197ff98133"
++
++def download_bags(start, end, download_dir, task, revision=HF_REVISION):
++    """Downloads bags from start index to end index."""
++    task_map = {
++        "TASK1-ToySorting": "task1",
++        "TASK2-ParcelWeighing": "task2",
++        "TASK3-ConveyorBeltSorting": "task3"
++    }
++    
++    if task not in task_map:
++        print(f"Error: Unknown task '{task}'. Available tasks: {list(task_map.keys())}")
++        return
++
++    prefix = task_map[task]
++    base_url = f"https://huggingface.co/datasets/LejuRobotics/kuavo_data_challenge_icra/resolve/{revision}/sim/{task}/{prefix}_{{:04d}}.bag"
++    
++    download_dir.mkdir(parents=True, exist_ok=True)
++    
++    for i in range(start, end + 1):
++        filename = f"{prefix}_{i:04d}.bag"
++        url = base_url.format(i)
++        target_path = download_dir / filename
++        
++        if target_path.exists():
++            print(f"File {filename} already exists, skipping download.")
++            continue
++            
++        print(f"Downloading {filename}...")
++        try:
++            subprocess.run(["curl", "-fL", url, "-o", str(target_path)], check=True)
++        except subprocess.CalledProcessError:
++            # A missing bag would shift every later episode index, so stop here.
++            target_path.unlink(missing_ok=True)
++            raise SystemExit(f"Failed to download {filename}. Check your connection or the URL.")
++
++def main():
++    parser = argparse.ArgumentParser(description="Batch download, convert, and delete Kuavo rosbags.")
++    parser.add_argument("--task", type=str, required=True, choices=["TASK1-ToySorting", "TASK2-ParcelWeighing", "TASK3-ConveyorBeltSorting"], help="Task name")
++    parser.add_argument("--start", type=int, required=True, help="Start index (e.g., 1)")
++    parser.add_argument("--end", type=int, required=True, help="End index (e.g., 100)")
++    parser.add_argument("--lerobot-dir", type=str, help="Target lerobot data directory (default: lerobot_data/<task>)")
++    parser.add_argument("--revision", type=str, default=HF_REVISION, help="Hugging Face dataset revision")
++    
++    args = parser.parse_args()
++    
++    project_root = Path(__file__).parent.parent.absolute()
++    
++    # Ensure lerobot_dir is an absolute path to avoid nesting issues in CvtRosbag2Lerobot
++    if args.lerobot_dir:
++        lerobot_dir = os.path.abspath(args.lerobot_dir)
++    else:
++        lerobot_dir = str(project_root / "lerobot_data" / args.task)
++    
++    raw_bags_dir = project_root / "temp_raw_bags" / args.task
++    
++    # 1. Download
++    download_bags(args.start, args.end, raw_bags_dir, args.task, args.revision)
++    
++    # 2. Convert
++    conversion_script = project_root / "kuavo_data" / "CvtRosbag2Lerobot.py"
++    cmd = [
++        "python", str(conversion_script),
++        "--config-path=../configs/data/",
++        "--config-name=KuavoRosbag2Lerobot.yaml",
++        f"rosbag.rosbag_dir={raw_bags_dir}",
++        f"rosbag.lerobot_dir={lerobot_dir}"
++    ]
++    
++    print(f"\nStarting conversion process for {args.task}...")
++    try:
++        # Run conversion script
++        subprocess.run(cmd, check=True)
++        print(f"\nConversion successfully completed for batch of {args.task}.")
++        
++        # 3. Delete rosbags to save space
++        print(f"Cleaning up {raw_bags_dir}...")
++        for file in raw_bags_dir.glob("*.bag"):
++            file.unlink()
++        print("Cleanup finished.")
++        
++    except subprocess.CalledProcessError as e:
++        print(f"\nError during conversion: {e}")
++        print("Note: Raw rosbags were NOT deleted so you can retry or debug.")
++
++if __name__ == "__main__":
++    main()
+diff --git a/kuavo_data/check_parquet.py b/kuavo_data/check_parquet.py
+new file mode 100644
+index 0000000..fb95b7c
+--- /dev/null
++++ b/kuavo_data/check_parquet.py
+@@ -0,0 +1,38 @@
++import os
++import pyarrow.parquet as pq
++from pathlib import Path
++
++def check_parquet_files(directory):
++    directory = Path(directory)
++    print(f"Checking parquet files in {directory}...")
++    
++    parquet_files = list(directory.rglob("*.parquet"))
++    if not parquet_files:
++        print("No parquet files found.")
++        return
++
++    corrupted_files = []
++    for file_path in parquet_files:
++        try:
++            pq.read_metadata(file_path)
++        except Exception as e:
++            print(f"[CORRUPTED] {file_path}")
++            print(f"  Error: {e}")
++            corrupted_files.append(file_path)
++        else:
++            # print(f"[OK] {file_path}")
++            pass
++
++    if corrupted_files:
++        print(f"\nFound {len(corrupted_files)} corrupted files.")
++        for f in corrupted_files:
++            print(f" - {f}")
++    else:
++        print("\nAll parquet files are healthy.")
++
++if __name__ == "__main__":
++    import sys
++    base_dir = "/root/kuavo_data_challenge/lerobot_data/TASK2-ParcelWeighing"
++    if len(sys.argv) > 1:
++        base_dir = sys.argv[1]
++    check_parquet_files(base_dir)
+diff --git a/kuavo_data/consolidate_dataset.py b/kuavo_data/consolidate_dataset.py
+new file mode 100644
+index 0000000..2849a50
+--- /dev/null
++++ b/kuavo_data/consolidate_dataset.py
+@@ -0,0 +1,56 @@
++import argparse
++import logging
++from pathlib import Path
++from lerobot.datasets.aggregate import aggregate_datasets
++from lerobot.utils.utils import init_logging
++
++def consolidate(repo_id, root, output_repo_id=None, output_root=None, data_size_mb=10000):
++    """
++    Consolidates a batched dataset into a single finalized dataset.
++    Uses lerobot's aggregate_datasets to merge chunks and re-calculate stats.
++    """
++    init_logging()
++    
++    source_root = Path(root).absolute()
++    
++    if output_repo_id is None:
++        output_repo_id = f"{repo_id}_consolidated"
++    
++    if output_root is None:
++        output_root = source_root.parent / f"{source_root.name}_consolidated"
++    
++    output_root = Path(output_root).absolute()
++    
++    logging.info(f"Consolidating dataset: {repo_id} at {source_root}")
++    logging.info(f"Target: {output_repo_id} at {output_root}")
++    
++    # We aggregate the single dataset into the new destination.
++    # This will merge all small parquet shards into larger files (up to data_size_mb).
++    aggregate_datasets(
++        repo_ids=[repo_id],
++        aggr_repo_id=output_repo_id,
++        roots=[source_root],
++        aggr_root=output_root,
++        data_files_size_in_mb=data_size_mb,  # Setting this high forces fewer/one parquet file
++    )
++    
++    logging.info("Consolidation complete!")
++    logging.info(f"You can now find the unified dataset at: {output_root}")
++
++if __name__ == "__main__":
++    parser = argparse.ArgumentParser(description="Consolidate batched LeRobot dataset into a single finalized version.")
++    parser.add_argument("--repo-id", type=str, required=True, help="Repo ID of the source dataset (e.g. lerobot/TASK1-ToySorting)")
++    parser.add_argument("--root", type=str, required=True, help="Absolute path to the source dataset root directory")
++    parser.add_argument("--output-repo-id", type=str, help="Optional: Repo ID for the consolidated dataset")
++    parser.add_argument("--output-root", type=str, help="Optional: Path for the consolidated dataset")
++    parser.add_argument("--size-mb", type=float, default=10000, help="Max size of output parquet files in MB (default 10GB to force single file)")
++    
++    args = parser.parse_args()
++    
++    consolidate(
++        args.repo_id,
++        args.root,
++        output_repo_id=args.output_repo_id,
++        output_root=args.output_root,
++        data_size_mb=args.size_mb
++    )

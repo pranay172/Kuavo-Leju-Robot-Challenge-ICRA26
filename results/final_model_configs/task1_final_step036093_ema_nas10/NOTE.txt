@@ -1,0 +1,1 @@
+Task 1 pick: EMA step036093 of task1_act_fresh_wsd_40000_20261004_180327 (snapshot written when the run was stopped by hand; the later LR-decay snapshot step039702 scored 75.8 on the same DEV seeds), n_action_steps=10 (no ensemble). DEV 10 seeds 88.0; BENCH 100-129 86.0 (23/30 perfect); reserve 130-143 79.9.

@@ -1,0 +1,1 @@
+Task 2 pick: EMA step035000 of task2_act_fresh_wsd_40000_20261005_060359, n_action_steps=5 (no ensemble). DEV d20 80.7 vs nas10 71.0; BENCH100-129 71.6 vs nas10 67.8; clean BENCH re-check 77.3 (29 episodes) vs nas10 66.1.

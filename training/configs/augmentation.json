@@ -1,0 +1,10 @@
+{
+  "max_num_transforms": 1,
+  "random_order": true,
+  "tfs": {
+    "notransform": {"weight": 3.0, "type": "Identity", "kwargs": {}},
+    "brightness": {"weight": 1.0, "type": "ColorJitter", "kwargs": {"brightness": [0.9, 1.1]}},
+    "contrast": {"weight": 1.0, "type": "ColorJitter", "kwargs": {"contrast": [0.9, 1.1]}},
+    "saturation": {"weight": 1.0, "type": "ColorJitter", "kwargs": {"saturation": [0.9, 1.1]}}
+  }
+}
